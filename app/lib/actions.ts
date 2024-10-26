@@ -26,10 +26,16 @@ export async function createInvoice(formData: FormData) {
   // 我们为发票的创建日期创建一个格式为“YYYY-MM-DD”的新日期：
   const date = new Date().toISOString().split("T")[0];
 
-  await sql`
-    INSERT INTO invoices (customer_id, amount, status, date)
-    VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
-  `;
+  try {
+    await sql`
+      INSERT INTO invoices (customer_id, amount, status, date)
+      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+    `;
+  } catch (error) {
+    return {
+      message: "Database Error: Failed to Create Invoice.",
+    };
+  }
 
   // 只有加了这个，进到新页面，才会重新渲染并且更新数据，这就是因为 nextJs 缓存的原因。
   revalidatePath("/dashboard/invoices");
@@ -47,17 +53,26 @@ export async function updateInvoice(id: string, formData: FormData) {
 
   const amountInCents = amount * 100;
 
-  await sql`
-      UPDATE invoices
-      SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-      WHERE id = ${id}
-    `;
+  try {
+    await sql`
+        UPDATE invoices
+        SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+        WHERE id = ${id}
+      `;
+  } catch (error) {
+    return { message: "Database Error: Failed to Update Invoice." };
+  }
 
   revalidatePath("/dashboard/invoices");
   redirect("/dashboard/invoices");
 }
 
 export async function deleteInvoice(id: string) {
-  await sql`DELETE FROM invoices WHERE id = ${id}`;
-  revalidatePath("/dashboard/invoices");
+  try {
+    await sql`DELETE FROM invoices WHERE id = ${id}`;
+    revalidatePath("/dashboard/invoices");
+    return { message: "Deleted Invoice." };
+  } catch (error) {
+    return { message: "Database Error: Failed to Delete Invoice." };
+  }
 }
